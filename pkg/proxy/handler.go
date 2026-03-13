@@ -81,7 +81,7 @@ func (h *Handler) validateAuth(r *http.Request, rawToken, preimage string) error
 	if err != nil {
 		return fmt.Errorf("token: %w", err)
 	}
-	if err := verifyPreimage(preimage, tok.PaymentHash); err != nil {
+	if err = verifyPreimage(preimage, tok.PaymentHash); err != nil {
 		return fmt.Errorf("preimage: %w", err)
 	}
 	settled, err := h.backend.VerifyPayment(r.Context(), tok.PaymentHash)
