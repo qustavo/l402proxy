@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/qustavo/l402proxy/pkg/lightning"
 	"github.com/qustavo/l402proxy/pkg/proxy"
@@ -60,6 +61,11 @@ func main() {
 				Name:  "secret-key",
 				Usage: "Hex-encoded 32-byte HMAC secret (auto-generated if omitted — tokens won't survive restarts)",
 			},
+			&cli.DurationFlag{
+				Name:  "token-ttl",
+				Usage: "Token expiration duration (e.g. 24h, 1h30m, 48h)",
+				Value: 24 * time.Hour,
+			},
 		},
 		Action: run,
 	}
@@ -106,6 +112,7 @@ func run(c *cli.Context) error {
 		Upstream:    upstream,
 		PriceMsat:   priceMsat,
 		ServiceName: c.String("service-name"),
+		TokenTTL:    c.Duration("token-ttl"),
 	}, backend, secret, log)
 
 	addr := c.String("listen")

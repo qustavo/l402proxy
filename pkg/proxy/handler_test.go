@@ -59,6 +59,7 @@ func newTestHandler(t *testing.T, upstream *httptest.Server, settled bool) (*Han
 		Upstream:    upstreamURL,
 		PriceMsat:   10_000,
 		ServiceName: "test",
+		TokenTTL:    24 * time.Hour,
 	}, backend, secret, slog.New(slog.NewTextHandler(io_discard{}, nil)))
 	return h, tokens
 }

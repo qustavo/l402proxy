@@ -18,13 +18,12 @@ import (
 	"github.com/qustavo/l402proxy/pkg/macaroon"
 )
 
-const tokenTTL = 24 * time.Hour
-
 // Config holds the proxy handler settings.
 type Config struct {
 	Upstream    *url.URL
 	PriceMsat   int64
 	ServiceName string
+	TokenTTL    time.Duration
 }
 
 // Handler is an http.Handler that enforces L402 payment before proxying.
@@ -105,7 +104,7 @@ func (h *Handler) challenge(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("creating invoice: %w", err)
 	}
 
-	token, err := h.tokens.Issue(inv.PaymentHash, tokenTTL)
+	token, err := h.tokens.Issue(inv.PaymentHash, h.cfg.TokenTTL)
 	if err != nil {
 		return fmt.Errorf("issuing token: %w", err)
 	}

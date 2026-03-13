@@ -40,6 +40,7 @@ l402proxy \
 | `--lnd-cert` | `~/.lnd/tls.cert` | Path to LND TLS cert |
 | `--service-name` | `l402proxy` | Label used in invoice memos |
 | `--secret-key` | auto-generated | Hex-encoded 32-byte HMAC secret (tokens won't survive restarts if omitted) |
+| `--token-ttl` | `24h` | Token expiration duration (e.g. `24h`, `1h30m`, `48h`) |
 
 ## L402 flow (curl example)
 
@@ -72,7 +73,7 @@ HTTP/1.1 200 OK
 
 ## Token format
 
-`base64url(json_payload).hex(hmac_sha256)` — stateless, no database required. Token TTL is 24 hours.
+`base64url(json_payload).hex(hmac_sha256)` — stateless, no database required. Token TTL is 24 hours by default (configurable via `--token-ttl`).
 
 ## Comparison with Aperture
 
