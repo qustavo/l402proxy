@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -38,6 +37,11 @@ func main() {
 				Value: ":8080",
 			},
 			&cli.StringFlag{
+				Name:  "backend",
+				Usage: "Lightning backend to use (lnd or cln)",
+				Value: "lnd",
+			},
+			&cli.StringFlag{
 				Name:  "lnd-host",
 				Usage: "LND gRPC host:port",
 				Value: "localhost:10009",
@@ -51,6 +55,18 @@ func main() {
 				Name:  "lnd-cert",
 				Usage: "Path to LND TLS cert",
 				Value: defaultCertPath(),
+			},
+			&cli.StringFlag{
+				Name:  "cln-url",
+				Usage: "CLN REST API base URL (e.g. https://localhost:3010)",
+			},
+			&cli.StringFlag{
+				Name:  "cln-rune",
+				Usage: "CLN rune (auth token)",
+			},
+			&cli.StringFlag{
+				Name:  "cln-cert",
+				Usage: "Path to CLN TLS cert (optional; empty = system CAs)",
 			},
 			&cli.StringFlag{
 				Name:  "service-name",
@@ -94,19 +110,44 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	backend, err := lightning.NewLNDBackend(lightning.LNDConfig{
-		Host:         c.String("lnd-host"),
-		CertPath:     c.String("lnd-cert"),
-		MacaroonPath: c.String("lnd-macaroon"),
-	})
-	if err != nil {
-		return fmt.Errorf("connecting to LND: %w", err)
+	var backend lightning.Backend
+	backendType := c.String("backend")
+
+	switch backendType {
+	case "lnd":
+		b, err := lightning.NewLNDBackend(lightning.LNDConfig{
+			Host:         c.String("lnd-host"),
+			CertPath:     c.String("lnd-cert"),
+			MacaroonPath: c.String("lnd-macaroon"),
+		})
+		if err != nil {
+			return fmt.Errorf("connecting to LND: %w", err)
+		}
+		backend = b
+	case "cln":
+		clnURL := c.String("cln-url")
+		clnRune := c.String("cln-rune")
+		if clnURL == "" || clnRune == "" {
+			return fmt.Errorf("--cln-url and --cln-rune are required when using CLN backend")
+		}
+		b, err := lightning.NewCLNBackend(lightning.CLNConfig{
+			BaseURL:  clnURL,
+			Rune:     clnRune,
+			CertPath: c.String("cln-cert"),
+		})
+		if err != nil {
+			return fmt.Errorf("connecting to CLN: %w", err)
+		}
+		backend = b
+	default:
+		return fmt.Errorf("unsupported backend: %q (must be 'lnd' or 'cln')", backendType)
 	}
-	log.Info("waiting for LND to be ready...")
-	if err := backend.Wait(context.Background()); err != nil {
-		return fmt.Errorf("LND not ready: %w", err)
+
+	log.Info("waiting for backend to be ready...", "backend", backendType)
+	if err := backend.Wait(c.Context); err != nil {
+		return fmt.Errorf("backend not ready: %w", err)
 	}
-	log.Info("LND ready")
+	log.Info("backend ready", "backend", backendType)
 
 	h := proxy.New(proxy.Config{
 		Upstream:    upstream,
