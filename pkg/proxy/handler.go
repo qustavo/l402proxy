@@ -58,7 +58,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h.log.Warn("invalid L402 credentials", "err", err, "path", r.URL.Path)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"error":%q}`, err.Error())
+			_, _ = fmt.Fprintf(w, `{"error":%q}`, err.Error())
 			return
 		}
 		if err := h.validateAuth(r, token, preimage); err == nil {

@@ -111,5 +111,5 @@ func (b *LNDBackend) VerifyPayment(ctx context.Context, paymentHash string) (boo
 	if err != nil {
 		return false, fmt.Errorf("LookupInvoice: %w", err)
 	}
-	return inv.Settled, nil
+	return (inv.State == lnrpc.Invoice_SETTLED), nil
 }
