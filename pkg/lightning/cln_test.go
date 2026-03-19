@@ -15,7 +15,7 @@ func TestCLNBackend_Wait_NotSynced(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"warning_bitcoind_sync":   "syncing blocks",
 			"warning_lightningd_sync": "",
 			"blockheight":             100,
@@ -47,13 +47,13 @@ func TestCLNBackend_Wait_Synced(t *testing.T) {
 		}
 		callCount++
 		if callCount < 2 {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"warning_bitcoind_sync":   "",
 				"warning_lightningd_sync": "syncing",
 				"blockheight":             100,
 			})
 		} else {
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"warning_bitcoind_sync":   "",
 				"warning_lightningd_sync": "",
 				"blockheight":             101,
@@ -87,14 +87,17 @@ func TestCLNBackend_CreateInvoice(t *testing.T) {
 		}
 
 		var req map[string]interface{}
-		json.NewDecoder(r.Body).Decode(&req)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
 		if req["amount_msat"].(float64) != 5000 || req["description"].(string) != "test memo" {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"payment_hash": "abcd1234567890ef",
 			"bolt11":       "lnbc50u1p...",
 		})
@@ -128,7 +131,7 @@ func TestCLNBackend_VerifyPayment_Unpaid(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"invoices": []map[string]string{
 				{"status": "unpaid"},
 			},
@@ -157,7 +160,7 @@ func TestCLNBackend_VerifyPayment_Paid(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"invoices": []map[string]string{
 				{"status": "paid"},
 			},
@@ -186,7 +189,7 @@ func TestCLNBackend_VerifyPayment_NotFound(t *testing.T) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"invoices": []map[string]string{},
 		})
 	}))
@@ -210,7 +213,7 @@ func TestCLNBackend_VerifyPayment_NotFound(t *testing.T) {
 func TestCLNBackend_HTTPError(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte("Invalid rune"))
+		_, _ = w.Write([]byte("Invalid rune"))
 	}))
 	defer server.Close()
 

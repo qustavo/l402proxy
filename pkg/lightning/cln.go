@@ -87,7 +87,7 @@ func (b *CLNBackend) post(ctx context.Context, path string, body any) (*http.Res
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return nil, fmt.Errorf("POST %s: HTTP %d: %s", path, resp.StatusCode, string(body))
 	}
@@ -103,6 +103,7 @@ func (b *CLNBackend) Wait(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("getinfo: %w", err)
 		}
+		defer func() { _ = resp.Body.Close() }()
 
 		var info struct {
 			WarningBitcoindSync   string `json:"warning_bitcoind_sync"`
@@ -110,10 +111,8 @@ func (b *CLNBackend) Wait(ctx context.Context) error {
 			BlockHeight           int64  `json:"blockheight"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-			resp.Body.Close()
 			return fmt.Errorf("decoding getinfo: %w", err)
 		}
-		resp.Body.Close()
 
 		// Synced when both warnings are absent/empty
 		if info.WarningBitcoindSync == "" && info.WarningLightningdSync == "" {
@@ -151,7 +150,7 @@ func (b *CLNBackend) CreateInvoice(ctx context.Context, amountMsat int64, memo s
 	if err != nil {
 		return nil, fmt.Errorf("invoice: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var invResp struct {
 		PaymentHash string `json:"payment_hash"`
@@ -178,7 +177,7 @@ func (b *CLNBackend) VerifyPayment(ctx context.Context, paymentHash string) (boo
 	if err != nil {
 		return false, fmt.Errorf("listinvoices: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var listResp struct {
 		Invoices []struct {
