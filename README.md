@@ -12,8 +12,16 @@ No database, no ceremony — single binary + Lightning node.
 
 ## Installation
 
+**From source:**
+
 ```sh
 go install github.com/qustavo/l402proxy/cmd/l402proxy@latest
+```
+
+**Docker:**
+
+```sh
+docker run --rm qustavo/l402proxy:latest --help
 ```
 
 ## Usage
