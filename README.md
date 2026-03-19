@@ -18,6 +18,8 @@ go install github.com/qustavo/l402proxy/cmd/l402proxy@latest
 
 ## Usage
 
+**With LND:**
+
 ```sh
 l402proxy \
   --upstream http://localhost:3000 \
@@ -28,6 +30,19 @@ l402proxy \
   --secret-key $(openssl rand -hex 32)
 ```
 
+**With Core Lightning (CLN):**
+
+```sh
+l402proxy \
+  --upstream http://localhost:3000 \
+  --price 10sat \
+  --backend cln \
+  --cln-url https://localhost:3010 \
+  --cln-rune "your-rune-here" \
+  --cln-cert /path/to/cln/tls.cert \
+  --secret-key $(openssl rand -hex 32)
+```
+
 ### Flags
 
 | Flag | Default | Description |
@@ -35,9 +50,13 @@ l402proxy \
 | `--upstream` | required | URL of the backend service |
 | `--price` | required | Price per request (`10sat`, `1000msat`) |
 | `--listen` | `:8080` | Address to listen on |
+| `--backend` | `lnd` | Lightning backend to use (`lnd` or `cln`) |
 | `--lnd-host` | `localhost:10009` | LND gRPC host:port |
 | `--lnd-macaroon` | `~/.lnd/data/chain/bitcoin/mainnet/admin.macaroon` | Path to LND admin macaroon |
 | `--lnd-cert` | `~/.lnd/tls.cert` | Path to LND TLS cert |
+| `--cln-url` | empty | CLN REST API base URL (e.g. `https://localhost:3010`; required for `cln` backend) |
+| `--cln-rune` | empty | CLN rune (auth token; required for `cln` backend) |
+| `--cln-cert` | empty | Path to CLN TLS cert (optional; empty = system CAs) |
 | `--service-name` | `l402proxy` | Label used in invoice memos |
 | `--secret-key` | auto-generated | Hex-encoded 32-byte HMAC secret (tokens won't survive restarts if omitted) |
 | `--token-ttl` | `24h` | Token expiration duration (e.g. `24h`, `1h30m`, `48h`) |
