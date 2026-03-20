@@ -1,5 +1,8 @@
 # l402proxy
 
+[![Go](https://github.com/qustavo/l402proxy/actions/workflows/go.yml/badge.svg)](https://github.com/qustavo/l402proxy/actions/workflows/go.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/qustavo/l402proxy.svg)](https://pkg.go.dev/github.com/qustavo/l402proxy)
+
 Drop an L402 payment gate in front of any HTTP service in one command.
 
 No database, no ceremony — single binary + Lightning node.
