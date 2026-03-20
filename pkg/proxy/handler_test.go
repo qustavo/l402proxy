@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -60,14 +61,9 @@ func newTestHandler(t *testing.T, upstream *httptest.Server, settled bool) (*Han
 		PriceMsat:   10_000,
 		ServiceName: "test",
 		TokenTTL:    24 * time.Hour,
-	}, backend, secret, slog.New(slog.NewTextHandler(io_discard{}, nil)))
+	}, backend, secret, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	return h, tokens
 }
-
-// io_discard is an io.Writer that discards all output (for silencing test logs).
-type io_discard struct{}
-
-func (io_discard) Write(p []byte) (int, error) { return len(p), nil }
 
 func TestServeHTTP_NoAuth_Returns402(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
