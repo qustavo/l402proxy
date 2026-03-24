@@ -194,3 +194,23 @@ func (b *CLNBackend) VerifyPayment(ctx context.Context, paymentHash string) (boo
 
 	return listResp.Invoices[0].Status == "paid", nil
 }
+
+func (b *CLNBackend) PayInvoice(ctx context.Context, bolt11 string) (string, error) {
+	reqBody := map[string]any{
+		"bolt11": bolt11,
+	}
+
+	resp, err := b.post(ctx, "/v1/pay", reqBody)
+	if err != nil {
+		return "", fmt.Errorf("pay: %w", err)
+	}
+
+	var payResp struct {
+		PaymentPreimage string `json:"payment_preimage"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payResp); err != nil {
+		return "", fmt.Errorf("decoding pay response: %w", err)
+	}
+
+	return payResp.PaymentPreimage, nil
+}

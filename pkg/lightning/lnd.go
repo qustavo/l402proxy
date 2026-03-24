@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lightningnetwork/lnd/lnrpc"
+	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
@@ -26,7 +27,9 @@ type LNDConfig struct {
 // LNDBackend implements Backend against an LND node via gRPC.
 type LNDBackend struct {
 	client   lnrpc.LightningClient
+	router   routerrpc.RouterClient
 	macaroon string
+	log      *slog.Logger
 }
 
 // NewLNDBackend connects to an LND node and returns a ready Backend.
@@ -54,7 +57,9 @@ func NewLNDBackend(cfg LNDConfig) (*LNDBackend, error) {
 
 	return &LNDBackend{
 		client:   lnrpc.NewLightningClient(conn),
+		router:   routerrpc.NewRouterClient(conn),
 		macaroon: hex.EncodeToString(macBytes),
+		log:      slog.With("module", "LND"),
 	}, nil
 }
 
@@ -73,7 +78,7 @@ func (b *LNDBackend) Wait(ctx context.Context) error {
 		if info.SyncedToChain {
 			return nil
 		}
-		slog.Info("waiting for LND to sync to chain...",
+		b.log.Info("waiting for LND to sync to chain...",
 			"block_height", info.BlockHeight,
 			"synced_to_chain", info.SyncedToChain,
 		)
@@ -111,5 +116,30 @@ func (b *LNDBackend) VerifyPayment(ctx context.Context, paymentHash string) (boo
 	if err != nil {
 		return false, fmt.Errorf("LookupInvoice: %w", err)
 	}
+
 	return (inv.State == lnrpc.Invoice_SETTLED), nil
+}
+
+func (b *LNDBackend) PayInvoice(ctx context.Context, bolt11 string) (string, error) {
+	stream, err := b.router.SendPaymentV2(b.withMacaroon(ctx), &routerrpc.SendPaymentRequest{
+		PaymentRequest: bolt11,
+	})
+	if err != nil {
+		return "", fmt.Errorf("sending payment: %w", err)
+	}
+
+	for {
+		payment, err := stream.Recv()
+		if err != nil {
+			return "", fmt.Errorf("recv from stream: %w", err)
+		}
+
+		switch payment.Status {
+		case lnrpc.Payment_SUCCEEDED:
+			return payment.PaymentPreimage, nil
+		case lnrpc.Payment_FAILED:
+			return "", fmt.Errorf("payment failed: %s", payment.FailureReason)
+		default:
+		}
+	}
 }
