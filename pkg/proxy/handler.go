@@ -42,7 +42,7 @@ func New(cfg Config, backend lightning.Backend, secret []byte, logger *slog.Logg
 		proxy:   httputil.NewSingleHostReverseProxy(cfg.Upstream),
 		backend: backend,
 		tokens:  macaroon.NewService(secret),
-		log:     logger,
+		log:     logger.With("module", "proxy"),
 	}
 }
 
@@ -50,7 +50,7 @@ func New(cfg Config, backend lightning.Backend, secret []byte, logger *slog.Logg
 //  1. If a valid L402 Authorization header is present → strip it, then proxy.
 //  2. Otherwise → issue a 402 Payment Required challenge.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.log.Info("Got request", slog.String("path", r.URL.Path))
+	h.log.Info(r.Method, "path", r.URL.Path)
 
 	if auth := r.Header.Get("Authorization"); auth != "" {
 		token, preimage, err := parseAuth(auth)
@@ -61,7 +61,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			_, _ = fmt.Fprintf(w, `{"error":%q}`, err.Error())
 			return
 		}
-		if err := h.validateAuth(r, token, preimage); err == nil {
+		if err := h.validateAuth(r, token, preimage); err != nil {
+			h.log.Debug("could not validate auth, continue with challenge", slog.Any("err", err))
+		} else {
 			// Strip the L402 header before forwarding so upstream never sees it.
 			r = r.Clone(r.Context())
 			r.Header.Del("Authorization")
