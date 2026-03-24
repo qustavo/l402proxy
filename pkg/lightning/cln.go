@@ -44,8 +44,6 @@ func NewCLNBackend(cfg CLNConfig) (*CLNBackend, error) {
 			return nil, fmt.Errorf("failed to add CLN cert to pool")
 		}
 		tlsConfig = &tls.Config{RootCAs: pool}
-	} else {
-		tlsConfig = &tls.Config{}
 	}
 
 	client := &http.Client{

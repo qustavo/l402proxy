@@ -1,0 +1,34 @@
+# End-to-end tests using nigiri for Lightning Network integration
+
+name: E2E Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+
+    - name: Install nigiri
+      run: curl https://getnigiri.vulpem.com | bash
+
+    - name: Start test network
+      run: bash scripts/network.sh start
+
+    - name: Run e2e tests
+      run: go test -v ./tests/...
+
+    - name: Stop test network
+      if: always()
+      run: bash scripts/network.sh stop
