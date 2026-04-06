@@ -19,7 +19,12 @@ EOF
 
 cmd_start() {
 	echo "Starting l402 integration network..."
-	nigiri start --ln
+	local nigiri_flags="--ln"
+	if [[ -n "${CI:-}" ]]; then
+		nigiri_flags="$nigiri_flags --ci"
+	fi
+
+	nigiri start $nigiri_flags
 	echo
 
 	echo -n "✓ Waiting for LND to become active "
@@ -31,6 +36,15 @@ cmd_start() {
 
 	echo -n "✓ Waiting for LND to sync with the chain "
 	until [[ $(nigiri lnd getinfo | jq -r .synced_to_chain) == 'true' ]]; do
+		sleep 1
+		echo -n "."
+	done
+	echo
+
+	# Wait for chopsticks (faucet service) to be ready before trying to fund wallets.
+	# Chopsticks may not respond to requests immediately after container starts.
+	echo -n "✓ Waiting for faucet service "
+	until curl -s http://localhost:3000 > /dev/null 2>&1; do
 		sleep 1
 		echo -n "."
 	done
@@ -51,6 +65,22 @@ cmd_start() {
 		echo -n "."
 	done
 	echo
+
+	# Wait for LND certificates and macaroons to be written to volumes.
+	# Containers may report "ready" before files are actually written to the host filesystem,
+	# causing tests to fail when trying to read credentials. This wait ensures files exist.
+	echo -n "✓ Waiting for LND credentials to be written "
+	until [[ -f ~/.nigiri/volumes/lnd/tls.cert && -f ~/.nigiri/volumes/lnd/data/chain/bitcoin/regtest/admin.macaroon ]]; do
+		sleep 1
+		echo -n "."
+	done
+	echo
+
+	# Generate and save CLN rune for authentication in tests
+	echo -n "✓ Generating CLN rune "
+	nigiri cln createrune | jq -r .rune > ~/.nigiri/volumes/lightningd/rune
+	echo
+	echo "✓ Rune saved to ~/.nigiri/volumes/lightningd/rune"
 
 	echo "Opening channels LND <-> CLN"
 	CLN_PUBKEY=$(nigiri cln getinfo | jq -r .id)
